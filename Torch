@@ -1,0 +1,80 @@
+# TensorFlow/Keras Example
+import tensorflow as tf
+from tensorflow.keras import layers, datasets
+
+# Load MNIST dataset
+(train_data, train_labels), (test_data, test_labels) = datasets.mnist.load_data()
+train_data = train_data.reshape(-1, 784).astype('float32') / 255.0
+test_data = test_data.reshape(-1, 784).astype('float32') / 255.0
+
+# Create a simple neural network
+model = tf.keras.Sequential([
+    layers.Dense(64, activation='relu', input_shape=(784,)),
+    layers.Dense(10, activation='softmax')
+])
+
+# Compile the model
+model.compile(optimizer='adam',
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+
+# Train the model
+model.fit(train_data, train_labels, epochs=5, batch_size=32, validation_split=0.1)
+
+# Evaluate the model
+test_loss, test_acc = model.evaluate(test_data, test_labels)
+print(f"TensorFlow/Keras Test Accuracy: {test_acc}")
+
+
+# PyTorch Example
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader
+
+# Load MNIST dataset
+transform = transforms.Compose([transforms.ToTensor(), transforms.Lambda(lambda x: x.view(-1))])
+train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+# Define the neural network
+class SimpleNet(nn.Module):
+    def __init__(self):
+        super(SimpleNet, self).__init__()
+        self.fc1 = nn.Linear(784, 64)
+        self.fc2 = nn.Linear(64, 10)
+    
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+model = SimpleNet()
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+# Train the model
+for epoch in range(5):
+    running_loss = 0.0
+    for data, labels in train_loader:
+        optimizer.zero_grad()
+        outputs = model(data)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+        running_loss += loss.item()
+    print(f"Epoch {epoch+1}, Loss: {running_loss/len(train_loader)}")
+
+# Evaluate the model
+correct = 0
+total = 0
+with torch.no_grad():
+    for data, labels in test_loader:
+        outputs = model(data)
+        _, predicted = torch.max(outputs.data, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+print(f"PyTorch Test Accuracy: {correct / total}")
